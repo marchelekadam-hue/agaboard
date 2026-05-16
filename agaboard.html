@@ -896,29 +896,50 @@ function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 window.toast=msg=>{const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);};
 
 // ---- DIALOG SYSTEM (replaces confirm/prompt/alert) ----
-function dlg({title='',msg='',input=null,opts=null,danger=false,okText='OK',cancelText='Anuluj',onOk,onCancel}){
+function dlg({title,msg,input,opts,danger,okText,cancelText,onOk,onCancel}){
+  title=title||'';msg=msg||'';okText=okText||'OK';cancelText=cancelText||'Anuluj';
   const ov=document.getElementById('dlg-ov');
   document.getElementById('dlg-title').textContent=title;
   document.getElementById('dlg-msg').textContent=msg;
   const inp=document.getElementById('dlg-input');
   const optsEl=document.getElementById('dlg-opts');
-  if(input!==null){inp.style.display='block';inp.value=input;inp.placeholder='';setTimeout(()=>inp.focus(),100);}else inp.style.display='none';
-  if(opts){
-    optsEl.style.display='flex';
-    optsEl.innerHTML=opts.map((o,i)=>`<button class="dlg-opt" onclick="dlgOptClick(${i})">${o}</button>`).join('');
-    window._dlgOptCb=(i)=>{closeDlg();if(onOk)onOk(i);};
-  }else optsEl.style.display='none';
   const btns=document.getElementById('dlg-btns');
-  if(opts){btns.innerHTML=`<button class="dlg-btn dlg-btn-cancel" onclick="closeDlg()">${cancelText}</button>`;}
-  else btns.innerHTML=`<button class="dlg-btn dlg-btn-cancel" onclick="dlgCancel()">${cancelText}</button><button class="dlg-btn ${danger?'dlg-btn-danger':'dlg-btn-ok'}" onclick="dlgOk()">${okText}</button>`;
-  window._dlgOkCb=()=>{const v=input!==null?inp.value:true;closeDlg();if(onOk)onOk(v);};
-  window._dlgCancelCb=()=>{closeDlg();if(onCancel)onCancel();};
+  optsEl.innerHTML='';btns.innerHTML='';
+  if(input!==undefined&&input!==null){inp.style.display='block';inp.value=input||'';setTimeout(()=>inp.focus(),150);}
+  else{inp.style.display='none';}
+  const cancelBtn=document.createElement('button');
+  cancelBtn.className='dlg-btn dlg-btn-cancel';
+  cancelBtn.textContent=cancelText;
+  cancelBtn.addEventListener('click',()=>{closeDlg();if(onCancel)onCancel();});
+  if(opts&&opts.length){
+    optsEl.style.display='flex';
+    opts.forEach((o,i)=>{
+      const b=document.createElement('button');
+      b.className='dlg-opt';b.textContent=o;
+      b.addEventListener('click',()=>{closeDlg();if(onOk)onOk(i);});
+      optsEl.appendChild(b);
+    });
+    btns.appendChild(cancelBtn);
+  }else{
+    optsEl.style.display='none';
+    const okBtn=document.createElement('button');
+    okBtn.className='dlg-btn '+(danger?'dlg-btn-danger':'dlg-btn-ok');
+    okBtn.textContent=okText;
+    okBtn.addEventListener('click',()=>{
+      const v=(input!==undefined&&input!==null)?inp.value:true;
+      closeDlg();if(onOk)onOk(v);
+    });
+    btns.appendChild(cancelBtn);
+    btns.appendChild(okBtn);
+  }
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'&&inp.style.display!=='none'){
+      const v=inp.value;closeDlg();if(onOk)onOk(v);
+    }
+    if(e.key==='Escape'){closeDlg();if(onCancel)onCancel();}
+  };
   ov.classList.add('open');
-  inp.onkeydown=e=>{if(e.key==='Enter')dlgOk();if(e.key==='Escape')dlgCancel();};
 }
-window.dlgOk=()=>{if(window._dlgOkCb)window._dlgOkCb();};
-window.dlgCancel=()=>{if(window._dlgCancelCb)window._dlgCancelCb();};
-window.dlgOptClick=i=>{if(window._dlgOptCb)window._dlgOptCb(i);};
 function closeDlg(){document.getElementById('dlg-ov').classList.remove('open');}
 
 // ---- PATCHED FUNCTIONS using dlg() ----
