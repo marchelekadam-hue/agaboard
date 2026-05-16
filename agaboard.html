@@ -259,6 +259,26 @@ body.purple{--bg:#0D0B1A;--bg2:#13102A;--bg3:#1C1838;--bg4:#252145;--accent:#9B6
 .lrow:hover,.lrow:active{background:var(--bg3)}
 
 /* TOAST */
+/* CUSTOM DIALOG */
+.dlg-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.dlg-ov.open{opacity:1;pointer-events:all}
+.dlg-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:360px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.dlg-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+.dlg-msg{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5}
+.dlg-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:14px}
+.dlg-input:focus{border-color:var(--accent)}
+.dlg-btns{display:flex;gap:8px;justify-content:flex-end}
+.dlg-btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s}
+.dlg-btn-cancel{background:var(--bg3);color:var(--text2);border:1px solid var(--border2)}
+.dlg-btn-cancel:hover{color:var(--text)}
+.dlg-btn-ok{background:var(--accent);color:#fff}
+.dlg-btn-ok:hover{opacity:.9}
+.dlg-btn-danger{background:var(--accent5);color:#fff}
+.dlg-btn-danger:hover{opacity:.9}
+.dlg-opts{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.dlg-opt{padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif;transition:all .15s}
+.dlg-opt:hover{background:var(--bg4);border-color:var(--accent);color:var(--accent)}
+
 .toast{position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;box-shadow:var(--shadow);transform:translateY(60px);opacity:0;transition:all .3s;z-index:9999;max-width:260px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast i{color:var(--accent3);font-size:15px}
@@ -527,6 +547,17 @@ body.purple{--bg:#0D0B1A;--bg2:#13102A;--bg3:#1C1838;--bg4:#252145;--accent:#9B6
 
 <div class="toast" id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
 
+<!-- CUSTOM DIALOG -->
+<div class="dlg-ov" id="dlg-ov">
+  <div class="dlg-box">
+    <div class="dlg-title" id="dlg-title"></div>
+    <div class="dlg-msg" id="dlg-msg"></div>
+    <input class="dlg-input" id="dlg-input" type="text" style="display:none">
+    <div class="dlg-opts" id="dlg-opts" style="display:none"></div>
+    <div class="dlg-btns" id="dlg-btns"></div>
+  </div>
+</div>
+
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
@@ -551,7 +582,6 @@ setTheme(localStorage.getItem('aga-theme')||'dark');
 // AUTH
 window.switchTab=t=>{document.getElementById('tab-login').classList.toggle('active',t==='login');document.getElementById('tab-register').classList.toggle('active',t==='register');document.getElementById('auth-btn').textContent=t==='login'?'Zaloguj się':'Utwórz konto';window._am=t};window._am='login';
 window.doAuth=async()=>{const em=document.getElementById('auth-email').value.trim(),pw=document.getElementById('auth-password').value,er=document.getElementById('auth-error');er.style.display='none';try{if(window._am==='login')await signInWithEmailAndPassword(auth,em,pw);else await createUserWithEmailAndPassword(auth,em,pw);}catch(e){er.style.display='block';const m={'auth/user-not-found':'Nie znaleziono użytkownika.','auth/wrong-password':'Nieprawidłowe hasło.','auth/email-already-in-use':'Email już zajęty.','auth/weak-password':'Min. 6 znaków.','auth/invalid-email':'Nieprawidłowy email.','auth/invalid-credential':'Nieprawidłowy email lub hasło.'};er.textContent=m[e.code]||e.message;}};
-window.logout=async()=>{if(!confirm('Wylogować się?'))return;if(unsub)unsub();await signOut(auth)};
 
 onAuthStateChanged(auth,async user=>{
   if(user){uid=user.uid;document.getElementById('auth-screen').style.display='none';document.getElementById('loading-screen').style.display='flex';
@@ -621,7 +651,7 @@ function rBoard(){
     cc2.forEach(c=>div.querySelector(`#cc-${colK}`).appendChild(bCard(c.id)));
   });
   const ab=document.createElement('button');ab.className='add-col-btn';ab.title='Nowa kolumna';ab.innerHTML='<i class="ti ti-plus"></i>';
-  ab.onclick=()=>{const n=prompt('Nazwa nowej kolumny:');if(!n)return;boards[curBoard].cols.push({id:'c_'+Date.now(),title:n,color:CC[boards[curBoard].cols.length%CC.length]});schSave();render();};
+  ab.onclick=()=>window._addColBtn();
   el.appendChild(ab);
 }
 function bCard(cid){
@@ -641,7 +671,6 @@ function bCard(cid){
   return div;
 }
 window.dropC=(e,colK)=>{e.preventDefault();document.querySelectorAll('.col-cards').forEach(x=>x.classList.remove('drag-over'));if(!dragId||cards[dragId]?.col===colK)return;const b=boards[curBoard];const col=b?.cols.find(c=>ck(curBoard,c.id)===colK);cards[dragId].col=colK;(cards[dragId].activity=cards[dragId].activity||[]).unshift('Przeniesiono do "'+(col?.title||'')+'"');schSave();render();toast('Karta przeniesiona');};
-window.colMenu=(bid,cid2)=>{const b=boards[bid];if(!b)return;const col=b.cols.find(c=>c.id===cid2);if(!col)return;const a=prompt(`Kolumna: ${col.title}\n\n1 - Zmień nazwę\n2 - Usuń\n\nWybierz:`);if(a==='1'){const n=prompt('Nowa nazwa:',col.title);if(n){col.title=n;schSave();render();}}else if(a==='2'){const colK=ck(bid,cid2);if(Object.values(cards).some(c=>c.col===colK)&&!confirm('Usunąć z kartami?'))return;Object.keys(cards).forEach(cid3=>{if(cards[cid3].col===colK)delete cards[cid3];});b.cols=b.cols.filter(c=>c.id!==cid2);schSave();render();}};
 window.sortByPrio=()=>{const ord={high:3,medium:2,low:1};cards=Object.fromEntries(Object.values(cards).sort((a,b2)=>(ord[b2.priority]||0)-(ord[a.priority]||0)).map(c=>[c.id,c]));render();toast('Posortowano wg priorytetu');};
 
 // CARD MODAL
@@ -659,9 +688,6 @@ window.addCk=()=>{(cards[openId].checklist=cards[openId].checklist||[]).push({te
 function rCmts(){const c=cards[openId];document.getElementById('m-cmts').innerHTML=(c.comments||[]).map(cm=>`<div class="cmtitem"><div class="avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0">${cm.author[0]}</div><div style="margin-left:6px"><div style="font-size:11px;font-weight:500;color:var(--text)">${cm.author} <span style="color:var(--text3);font-weight:400">${cm.ts}</span></div><div style="font-size:12px;color:var(--text2)">${cm.text}</div></div></div>`).join('');}
 window.addCmt=()=>{const inp=document.getElementById('m-cmt');const txt=inp.value.trim();if(!txt)return;const now=new Date().toLocaleDateString('pl-PL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});(cards[openId].comments=cards[openId].comments||[]).push({author:auth.currentUser?.email?.split('@')[0]||'Ty',text:txt,ts:now});inp.value='';rCmts();schSave();};
 window.openNewCard=colK=>{const b=boards[curBoard];const col=colK||(b?ck(curBoard,b.cols[0]?.id):null);if(!col)return;const cid='c'+(++cardCount)+'_'+Date.now();cards[cid]={id:cid,title:'Nowa karta',col,labels:[],due:'',priority:'',desc:'',checklist:[],comments:[],activity:['Karta utworzona']};schSave();render();openCard(cid);};
-window.dupCard=()=>{const c=cards[openId];const cid='c'+(++cardCount)+'_'+Date.now();cards[cid]={...JSON.parse(JSON.stringify(c)),id:cid,title:c.title+' (kopia)',activity:['Zduplikowano']};closeModal();schSave();toast('Karta zduplikowana');};
-window.archCard=()=>{if(!confirm('Archiwizować?'))return;delete cards[openId];closeModal();schSave();toast('Karta zarchiwizowana');};
-window.mvCard=()=>{const c=cards[openId];const b=boards[curBoard];if(!b)return;const opts=b.cols.filter(col=>ck(curBoard,col.id)!==c.col).map((col,i)=>`${i+1} - ${col.title}`).join('\n');const inp=prompt('Przenieś do:\n\n'+opts+'\n\nPodaj numer:');if(!inp)return;const t=b.cols.filter(col=>ck(curBoard,col.id)!==c.col)[parseInt(inp)-1];if(!t)return;c.col=ck(curBoard,t.id);document.getElementById('m-sub').textContent='w kolumnie: '+t.title;schSave();toast('Przeniesiono do "'+t.title+'"');};
 
 // ====== CALENDAR ======
 function rCal(){
@@ -813,7 +839,6 @@ window.saveEv=()=>{
   rCal();
   toast(editEvId?'Wydarzenie zaktualizowane':'Wydarzenie dodane');
 };
-window.delEv=()=>{if(!editEvId||!confirm('Usunąć wydarzenie?'))return;delete events[editEvId];closeEvForm();schSave();if(selDay)updateDayPanel(selDay);rCal();toast('Wydarzenie usunięte');};
 
 // CATEGORY MANAGER
 window.openCatMgr=()=>{rCMList();document.getElementById('cm-ov').classList.add('open');};
@@ -823,7 +848,6 @@ function rCMList(){document.getElementById('cm-list').innerHTML=categories.map((
 window.addCat=()=>{const n=document.getElementById('cm-new').value.trim();if(!n)return;const color=document.getElementById('cm-color').value;categories.push({id:'cat_'+Date.now(),name:n,color});document.getElementById('cm-new').value='';rCMList();schSave();};
 window.updCatName=(i,v)=>{if(categories[i])categories[i].name=v;schSave();};
 window.updCatColor=(i,v)=>{if(categories[i])categories[i].color=v;rCMList();schSave();};
-window.delCat=i=>{if(!confirm('Usunąć kategorię?'))return;const id=categories[i].id;categories.splice(i,1);Object.values(events).forEach(ev=>{if(ev.catId===id)ev.catId='';});rCMList();schSave();};
 
 // LIST
 function rList(){
@@ -846,11 +870,9 @@ window.closeBMOut=e=>{if(e.target===document.getElementById('bm-ov'))closeBM();}
 function renderBML(){document.getElementById('bm-list').innerHTML=Object.values(boards).map(b=>`<div class="bm-item"><div class="bm-dot" style="background:${b.cols[0]?.color||'#4F6EF7'}"></div><input class="bm-name" value="${b.name}" onblur="renBoard('${b.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"><span class="bm-cols-c">${b.cols.length} kol.</span><button class="bm-ebtn" onclick="editBCols('${b.id}')"><i class="ti ti-columns"></i></button><button class="bm-del" onclick="delBoard('${b.id}')"><i class="ti ti-trash"></i></button></div>`).join('');}
 window.addBoard=()=>{const inp=document.getElementById('bm-new');const n=inp.value.trim();if(!n)return;const id='b_'+Date.now();boards[id]={id,name:n,cols:[{id:'todo',title:'Do zrobienia',color:'#4F6EF7'},{id:'inprog',title:'W trakcie',color:'#D97706'},{id:'done',title:'Gotowe',color:'#059669'}]};inp.value='';schSave();renderBML();toast('Projekt "'+n+'" dodany');};
 window.renBoard=(id,n)=>{if(!n.trim()||!boards[id])return;boards[id].name=n.trim();schSave();};
-window.delBoard=id=>{if(Object.keys(boards).length<=1){toast('Nie można usunąć ostatniego projektu');return;}if(!confirm('Usunąć projekt "'+boards[id].name+'" i wszystkie karty?'))return;Object.keys(cards).forEach(cid=>{if(cards[cid].col.startsWith(id+'_'))delete cards[cid];});delete boards[id];if(curBoard===id)curBoard=Object.keys(boards)[0];schSave();renderBML();document.getElementById('col-ed').style.display='none';toast('Projekt usunięty');};
 window.editBCols=bid=>{editBid=bid;const b=boards[bid];document.getElementById('col-ed').style.display='block';document.getElementById('col-ed-name').textContent=b.name;rColTags(bid);};
 function rColTags(bid){document.getElementById('col-tags').innerHTML=boards[bid].cols.map((c,i)=>`<span class="col-tag" style="border-left:3px solid ${c.color}">${c.title}<button class="col-tag-x" onclick="delCol('${bid}',${i})"><i class="ti ti-x"></i></button></span>`).join('');}
 window.addCol=()=>{if(!editBid)return;const inp=document.getElementById('col-new');const n=inp.value.trim();if(!n)return;boards[editBid].cols.push({id:'c_'+Date.now(),title:n,color:CC[boards[editBid].cols.length%CC.length]});inp.value='';rColTags(editBid);schSave();};
-window.delCol=(bid,i)=>{const col=boards[bid].cols[i];const colK=ck(bid,col.id);if(Object.values(cards).some(c=>c.col===colK)&&!confirm('Usunąć kolumnę z kartami?'))return;Object.keys(cards).forEach(cid=>{if(cards[cid].col===colK)delete cards[cid];});boards[bid].cols.splice(i,1);rColTags(bid);schSave();};
 
 // ICS
 window.exportICS=()=>{
@@ -872,6 +894,82 @@ function dateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(
 function parseDate(s){const[y,m,d]=s.split('-');return new Date(+y,+m-1,+d);}
 function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
 window.toast=msg=>{const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);};
+
+// ---- DIALOG SYSTEM (replaces confirm/prompt/alert) ----
+function dlg({title='',msg='',input=null,opts=null,danger=false,okText='OK',cancelText='Anuluj',onOk,onCancel}){
+  const ov=document.getElementById('dlg-ov');
+  document.getElementById('dlg-title').textContent=title;
+  document.getElementById('dlg-msg').textContent=msg;
+  const inp=document.getElementById('dlg-input');
+  const optsEl=document.getElementById('dlg-opts');
+  if(input!==null){inp.style.display='block';inp.value=input;inp.placeholder='';setTimeout(()=>inp.focus(),100);}else inp.style.display='none';
+  if(opts){
+    optsEl.style.display='flex';
+    optsEl.innerHTML=opts.map((o,i)=>`<button class="dlg-opt" onclick="dlgOptClick(${i})">${o}</button>`).join('');
+    window._dlgOptCb=(i)=>{closeDlg();if(onOk)onOk(i);};
+  }else optsEl.style.display='none';
+  const btns=document.getElementById('dlg-btns');
+  if(opts){btns.innerHTML=`<button class="dlg-btn dlg-btn-cancel" onclick="closeDlg()">${cancelText}</button>`;}
+  else btns.innerHTML=`<button class="dlg-btn dlg-btn-cancel" onclick="dlgCancel()">${cancelText}</button><button class="dlg-btn ${danger?'dlg-btn-danger':'dlg-btn-ok'}" onclick="dlgOk()">${okText}</button>`;
+  window._dlgOkCb=()=>{const v=input!==null?inp.value:true;closeDlg();if(onOk)onOk(v);};
+  window._dlgCancelCb=()=>{closeDlg();if(onCancel)onCancel();};
+  ov.classList.add('open');
+  inp.onkeydown=e=>{if(e.key==='Enter')dlgOk();if(e.key==='Escape')dlgCancel();};
+}
+window.dlgOk=()=>{if(window._dlgOkCb)window._dlgOkCb();};
+window.dlgCancel=()=>{if(window._dlgCancelCb)window._dlgCancelCb();};
+window.dlgOptClick=i=>{if(window._dlgOptCb)window._dlgOptCb(i);};
+function closeDlg(){document.getElementById('dlg-ov').classList.remove('open');}
+
+// ---- PATCHED FUNCTIONS using dlg() ----
+window.logout=()=>{dlg({title:'Wylogowanie',msg:'Na pewno chcesz się wylogować?',okText:'Wyloguj',cancelText:'Anuluj',danger:true,onOk:async()=>{if(unsub)unsub();await signOut(auth);}});};
+
+window.archCard=()=>{dlg({title:'Archiwizuj kartę',msg:'Karta zostanie usunięta z tablicy. Czy na pewno?',okText:'Archiwizuj',danger:true,onOk:()=>{delete cards[openId];closeModal();schSave();toast('Karta zarchiwizowana');}});};
+
+
+window.mvCard=()=>{
+  const c=cards[openId];const b=boards[curBoard];if(!b)return;
+  const targets=b.cols.filter(col=>ck(curBoard,col.id)!==c.col);
+  dlg({title:'Przenieś kartę',msg:'Wybierz kolumnę docelową:',opts:targets.map(col=>col.title),cancelText:'Anuluj',
+    onOk:i=>{const t=targets[i];if(!t)return;c.col=ck(curBoard,t.id);document.getElementById('m-sub').textContent='w kolumnie: '+t.title;schSave();toast('Przeniesiono do "'+t.title+'"');}
+  });
+};
+
+window.colMenu=(bid,cid2)=>{
+  const b=boards[bid];if(!b)return;const col=b.cols.find(c=>c.id===cid2);if(!col)return;
+  dlg({title:col.title,msg:'Co chcesz zrobić z tą kolumną?',opts:['Zmień nazwę','Usuń kolumnę'],cancelText:'Anuluj',
+    onOk:i=>{
+      if(i===0){dlg({title:'Zmień nazwę',msg:'',input:col.title,okText:'Zapisz',onOk:n=>{if(n&&n.trim()){col.title=n.trim();schSave();render();}}});}
+      else if(i===1){
+        const colK=ck(bid,cid2);
+        const hasCards=Object.values(cards).some(c=>c.col===colK);
+        const doDelete=()=>{Object.keys(cards).forEach(cid3=>{if(cards[cid3].col===colK)delete cards[cid3];});b.cols=b.cols.filter(c=>c.id!==cid2);schSave();render();};
+        if(hasCards){dlg({title:'Usuń kolumnę',msg:'Kolumna zawiera karty. Usunąć razem z nimi?',okText:'Usuń',danger:true,onOk:doDelete});}
+        else doDelete();
+      }
+    }
+  });
+};
+
+// add column button
+window._addColBtn=()=>{dlg({title:'Nowa kolumna',msg:'',input:'',okText:'Dodaj',onOk:n=>{if(!n||!n.trim())return;boards[curBoard].cols.push({id:'c_'+Date.now(),title:n.trim(),color:CC[boards[curBoard].cols.length%CC.length]});schSave();render();}});};
+
+window.delEv=()=>{if(!editEvId)return;dlg({title:'Usuń wydarzenie',msg:'Na pewno usunąć to wydarzenie?',okText:'Usuń',danger:true,onOk:()=>{delete events[editEvId];closeEvForm();schSave();if(selDay)updateDayPanel(selDay);rCal();toast('Wydarzenie usunięte');}});};
+
+window.delCat=i=>{dlg({title:'Usuń kategorię',msg:'Usunąć kategorię "'+categories[i].name+'"?',okText:'Usuń',danger:true,onOk:()=>{const id=categories[i].id;categories.splice(i,1);Object.values(events).forEach(ev=>{if(ev.catId===id)ev.catId='';});rCMList();schSave();}});};
+
+window.delBoard=id=>{
+  if(Object.keys(boards).length<=1){toast('Nie można usunąć ostatniego projektu');return;}
+  dlg({title:'Usuń projekt',msg:'Usunąć projekt "'+boards[id].name+'" wraz ze wszystkimi kartami?',okText:'Usuń',danger:true,onOk:()=>{Object.keys(cards).forEach(cid=>{if(cards[cid].col.startsWith(id+'_'))delete cards[cid];});delete boards[id];if(curBoard===id)curBoard=Object.keys(boards)[0];schSave();renderBML();document.getElementById('col-ed').style.display='none';toast('Projekt usunięty');}});
+};
+
+window.delCol=(bid,i)=>{
+  const col=boards[bid].cols[i];const colK=ck(bid,col.id);
+  const hasCards=Object.values(cards).some(c=>c.col===colK);
+  const doDelete=()=>{Object.keys(cards).forEach(cid=>{if(cards[cid].col===colK)delete cards[cid];});boards[bid].cols.splice(i,1);rColTags(bid);schSave();};
+  if(hasCards){dlg({title:'Usuń kolumnę',msg:'Kolumna "'+col.title+'" zawiera karty. Usunąć?',okText:'Usuń',danger:true,onOk:doDelete});}
+  else doDelete();
+};
 </script>
 </body>
 </html>
